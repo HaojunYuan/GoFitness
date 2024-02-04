@@ -1,12 +1,17 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
+
+	openai "github.com/sashabaranov/go-openai"
 )
 
 func CreateWorkout(w http.ResponseWriter, r *http.Request) {
@@ -129,4 +134,53 @@ func DeleteWorkout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(deletedWorkout)
+}
+
+func ChatGPT(w http.ResponseWriter, r *http.Request) {
+    var input struct {
+        Text string `json:"text"`
+    }
+
+    err := json.NewDecoder(r.Body).Decode(&input)
+    if err != nil {
+        log.Println(err)
+        http.Error(w, "Failed to parse request body", http.StatusBadRequest)
+        return
+    }
+
+	if err := godotenv.Load(); err != nil {
+        log.Fatal("Error loading .env file")
+    }
+
+    // Load OpenAI API key from environment variable
+    openaiAPIKey := os.Getenv("OPENAI_API_KEY")
+
+    if openaiAPIKey == "" {
+        log.Fatal("OpenAI API key not set")
+    }
+
+    client := openai.NewClient(openaiAPIKey)
+    result, err := client.CreateChatCompletion(
+		context.Background(),
+		openai.ChatCompletionRequest{
+			Model: openai.GPT3Dot5Turbo,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: input.Text,
+				},
+			},
+		},
+	)
+    if err != nil {
+        log.Println(err)
+        http.Error(w, "Failed to generate response from ChatGPT", http.StatusInternalServerError)
+        return
+    }
+
+    response := result.Choices[0].Message.Content
+
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(map[string]string{"response": response})
 }

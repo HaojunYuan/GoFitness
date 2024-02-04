@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	
 	err := InitializeDatabase()
 	if err != nil {
 		log.Fatal(err)
@@ -21,6 +22,7 @@ func main() {
 	router.HandleFunc("/workouts/{id}", GetWorkout).Methods("GET")
 	router.HandleFunc("/workouts/{id}", UpdateWorkout).Methods("PUT")
 	router.HandleFunc("/workouts/{id}", DeleteWorkout).Methods("DELETE")
+	router.HandleFunc("/chatgpt", ChatGPT).Methods("POST") // New ChatGPT endpoint
 
 	log.Println("Server started on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", router))
